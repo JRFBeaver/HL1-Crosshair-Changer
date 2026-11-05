@@ -1,6 +1,6 @@
 @echo off
 cd /d "%~dp0"
-title Half-Life Crosshair Changer v4.0 Builder
+title Half-Life Crosshair Changer v5.0 Builder
 
 set "EXE_NAME=HL1_Crosshair_Changer.exe"
 

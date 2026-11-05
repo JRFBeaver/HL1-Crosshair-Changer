@@ -10,17 +10,28 @@ namespace HL1CrosshairChanger
 {
     public class MainForm : Form
     {
+        private Label lblPath;
         private TextBox txtGamePath;
+        private Button btnBrowse;
+        private Label lblRes;
         private ComboBox cmbResolution;
+        private Label lblStyle;
         private ComboBox cmbStyle;
+        private Label lblColor;
         private ComboBox cmbColor;
         private Button btnCustomColor;
+        private Label lblPrev;
         private Panel pnlPreview;
         private Label lblStatus;
         private Button btnInstall;
         private Button btnRestore;
+        private Button btnLang;
+        private Label lblEasterEgg;
 
-        // HL1 Classic Color Palette (Dark Bronze/Charcoal + Amber Orange #FFA000)
+        private bool isRussian = false; // Default: English
+        private int secretClickCount = 0;
+
+        // HL1 Classic Color Palette
         private readonly Color hlBgDark = Color.FromArgb(24, 21, 18);
         private readonly Color hlPanelBg = Color.FromArgb(36, 31, 26);
         private readonly Color hlAmber = Color.FromArgb(255, 160, 0);
@@ -30,22 +41,55 @@ namespace HL1CrosshairChanger
 
         private Color customRgb = Color.FromArgb(0, 255, 128);
 
-        private readonly string[] styleNames = {
+        private readonly string[] styleNamesEN = {
+            "Large Circle + Dot",
+            "Medium Circle + Dot",
+            "Small Circle + Dot",
+            "Large Circle",
+            "Medium Circle",
+            "Small Circle",
+            "Large Brackets (.) + Dot",
+            "Medium Brackets (.) + Dot",
+            "Small Brackets (.) + Dot",
+            "Large V-Chevron",
+            "Medium V-Chevron",
+            "Small V-Chevron",
+            "Medium V-Chevron + Dot",
+            "Bold Dot",
+            "Small Crisp Dot"
+        };
+
+        private readonly string[] styleNamesRU = {
             "Большой круг с точкой (Large Circle + Dot)",
             "Средний круг с точкой (Medium Circle + Dot)",
             "Малый круг с точкой (Small Circle + Dot)",
             "Большой круг (Large Circle)",
             "Средний круг (Medium Circle)",
             "Малый круг (Small Circle)",
-            "V-образный прицел — Большой (Large V-Chevron)",
-            "V-образный прицел — Средний (Medium V-Chevron)",
-            "V-образный прицел — Малый (Small V-Chevron)",
+            "Большие дужки (.) с точкой (Large (.) Brackets)",
+            "Средние дужки (.) с точкой (Medium (.) Brackets)",
+            "Малые дужки (.) с точкой (Small (.) Brackets)",
+            "Большой V-образный (Large V-Chevron)",
+            "Средний V-образный (Medium V-Chevron)",
+            "Малый V-образный (Small V-Chevron)",
             "V-образный с точкой (Medium V-Chevron + Dot)",
             "Крупная точка (Bold Dot)",
             "Малая четкая точка (Small Dot)"
         };
 
-        private readonly string[] colorNames = {
+        private readonly string[] colorNamesEN = {
+            "Classic HL1 Amber",
+            "Green",
+            "Cyan",
+            "Blue",
+            "Red",
+            "Yellow",
+            "Magenta",
+            "White",
+            "Custom RGB Color..."
+        };
+
+        private readonly string[] colorNamesRU = {
             "Янтарный HL1 (Classic Amber)",
             "Зеленый (Green)",
             "Голубой (Cyan)",
@@ -55,6 +99,20 @@ namespace HL1CrosshairChanger
             "Розовый (Magenta)",
             "Белый (White)",
             "Свой цвет... (Custom RGB)"
+        };
+
+        private readonly string[] resNamesEN = {
+            "All Screen Resolutions (Recommended)",
+            "Standard / HD (< 1280px)",
+            "Full HD / Quad HD (1280px - 2559px)",
+            "4K Ultra HD (2560px and above)"
+        };
+
+        private readonly string[] resNamesRU = {
+            "Все разрешения экрана (Универсально)",
+            "Стандартное / HD (до 1280px)",
+            "Full HD / Quad HD (1280px - 2559px)",
+            "4K Ultra HD (2560px и выше)"
         };
 
         private readonly Color[] presetColors = {
@@ -70,8 +128,8 @@ namespace HL1CrosshairChanger
 
         public MainForm()
         {
-            this.Text = "Half-Life Crosshair Changer v4.0";
-            this.Size = new Size(600, 490);
+            this.Text = "Half-Life Crosshair Changer v5.0";
+            this.Size = new Size(600, 495);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
@@ -86,6 +144,7 @@ namespace HL1CrosshairChanger
             catch { }
 
             BuildUI();
+            ApplyLanguage();
             AutoDetectGameAndResolution();
         }
 
@@ -99,7 +158,7 @@ namespace HL1CrosshairChanger
 
         private void BuildUI()
         {
-            // Top Header Banner (HL1 Style)
+            // Top Header Banner
             Panel pnlHeader = new Panel() { Location = new Point(0, 0), Size = new Size(600, 48), BackColor = Color.FromArgb(18, 15, 12) };
             pnlHeader.Paint += delegate(object s, PaintEventArgs e) {
                 using (Pen p = new Pen(hlAmber, 2)) {
@@ -114,19 +173,26 @@ namespace HL1CrosshairChanger
                 ForeColor = hlAmber
             };
             Label lblVer = new Label() {
-                Text = "v4.0",
-                Location = new Point(535, 17),
+                Text = "v5.0",
+                Location = new Point(435, 16),
                 AutoSize = true,
                 Font = new Font("Consolas", 10f, FontStyle.Bold),
                 ForeColor = hlBorder
             };
+            btnLang = CreateHLButton("EN / RU", new Point(485, 11), new Size(85, 25), false);
+            btnLang.Click += delegate(object s, EventArgs e) {
+                isRussian = !isRussian;
+                ApplyLanguage();
+            };
+
             pnlHeader.Controls.Add(lblTitle);
             pnlHeader.Controls.Add(lblVer);
+            pnlHeader.Controls.Add(btnLang);
 
             // Game Path
-            Label lblPath = new Label() { Text = "Директория игры Half-Life:", Location = new Point(20, 62), AutoSize = true, ForeColor = hlAmber };
+            lblPath = new Label() { Location = new Point(20, 62), AutoSize = true, ForeColor = hlAmber };
             txtGamePath = new TextBox() { Location = new Point(20, 85), Width = 445, BackColor = hlPanelBg, ForeColor = hlTextWhite, BorderStyle = BorderStyle.FixedSingle };
-            Button btnBrowse = CreateHLButton("Обзор...", new Point(475, 83), new Size(95, 25), false);
+            btnBrowse = CreateHLButton("Browse...", new Point(475, 83), new Size(95, 25), false);
             btnBrowse.Click += delegate(object s, EventArgs e) {
                 using (var fbd = new FolderBrowserDialog()) {
                     if (fbd.ShowDialog() == DialogResult.OK) txtGamePath.Text = fbd.SelectedPath;
@@ -134,28 +200,17 @@ namespace HL1CrosshairChanger
             };
 
             // Resolution
-            Label lblRes = new Label() { Text = "Масштаб интерфейса (Разрешение):", Location = new Point(20, 124), AutoSize = true, ForeColor = hlAmber };
+            lblRes = new Label() { Location = new Point(20, 124), AutoSize = true, ForeColor = hlAmber };
             cmbResolution = new ComboBox() { Location = new Point(20, 147), Width = 355, DropDownStyle = ComboBoxStyle.DropDownList, BackColor = hlPanelBg, ForeColor = hlTextWhite, FlatStyle = FlatStyle.Flat };
-            cmbResolution.Items.AddRange(new string[] {
-                "Все разрешения экрана (Универсально)",
-                "Стандартное / HD (до 1280px)",
-                "Full HD / Quad HD (1280px - 2559px)",
-                "4K Ultra HD (2560px и выше)"
-            });
-            cmbResolution.SelectedIndex = 0;
 
             // Crosshair Style
-            Label lblStyle = new Label() { Text = "Форма прицела:", Location = new Point(20, 186), AutoSize = true, ForeColor = hlAmber };
+            lblStyle = new Label() { Location = new Point(20, 186), AutoSize = true, ForeColor = hlAmber };
             cmbStyle = new ComboBox() { Location = new Point(20, 209), Width = 355, DropDownStyle = ComboBoxStyle.DropDownList, BackColor = hlPanelBg, ForeColor = hlTextWhite, FlatStyle = FlatStyle.Flat };
-            cmbStyle.Items.AddRange(styleNames);
-            cmbStyle.SelectedIndex = 1;
             cmbStyle.SelectedIndexChanged += delegate(object s, EventArgs e) { pnlPreview.Invalidate(); };
 
             // Crosshair Color + Custom Picker
-            Label lblColor = new Label() { Text = "Цвет прицела:", Location = new Point(20, 248), AutoSize = true, ForeColor = hlAmber };
+            lblColor = new Label() { Location = new Point(20, 248), AutoSize = true, ForeColor = hlAmber };
             cmbColor = new ComboBox() { Location = new Point(20, 271), Width = 235, DropDownStyle = ComboBoxStyle.DropDownList, BackColor = hlPanelBg, ForeColor = hlTextWhite, FlatStyle = FlatStyle.Flat };
-            cmbColor.Items.AddRange(colorNames);
-            cmbColor.SelectedIndex = 0;
             cmbColor.SelectedIndexChanged += delegate(object s, EventArgs e) {
                 if (cmbColor.SelectedIndex == presetColors.Length) {
                     PickCustomColor();
@@ -163,7 +218,7 @@ namespace HL1CrosshairChanger
                 pnlPreview.Invalidate();
             };
 
-            btnCustomColor = CreateHLButton("Палитра RGB...", new Point(265, 270), new Size(110, 24), false);
+            btnCustomColor = CreateHLButton("RGB Palette...", new Point(265, 270), new Size(110, 24), false);
             btnCustomColor.Click += delegate(object s, EventArgs e) {
                 PickCustomColor();
                 cmbColor.SelectedIndex = presetColors.Length;
@@ -171,24 +226,46 @@ namespace HL1CrosshairChanger
             };
 
             // Preview Box
-            Label lblPrev = new Label() { Text = "Предпросмотр:", Location = new Point(400, 124), AutoSize = true, ForeColor = hlAmber };
+            lblPrev = new Label() { Location = new Point(400, 124), AutoSize = true, ForeColor = hlAmber };
             pnlPreview = new Panel() { Location = new Point(400, 147), Size = new Size(170, 150), BackColor = Color.FromArgb(14, 13, 11), BorderStyle = BorderStyle.FixedSingle };
             pnlPreview.Paint += DrawPreview;
 
             // Main Action Buttons
-            btnInstall = CreateHLButton("УСТАНОВИТЬ ПРИЦЕЛ", new Point(20, 325), new Size(275, 44), true);
+            btnInstall = CreateHLButton("INSTALL CROSSHAIR", new Point(20, 325), new Size(275, 44), true);
             btnInstall.Click += InstallCrosshair;
 
-            btnRestore = CreateHLButton("ВЕРНУТЬ СТАНДАРТНЫЙ", new Point(310, 325), new Size(260, 44), false);
+            btnRestore = CreateHLButton("RESTORE DEFAULT", new Point(310, 325), new Size(260, 44), false);
             btnRestore.Click += RestoreBackup;
 
             // Status & Footer Credits
-            lblStatus = new Label() { Text = "Система готова к установке прицела.", Location = new Point(20, 388), Size = new Size(550, 24), ForeColor = hlAmberBright };
+            lblStatus = new Label() { Location = new Point(20, 385), Size = new Size(550, 22), ForeColor = hlAmberBright };
+
+            // Secret Bottom-Left Easter Egg Zone (5 clicks -> "Kosh=💩")
+            lblEasterEgg = new Label() {
+                Text = "",
+                Location = new Point(18, 416),
+                Size = new Size(160, 32),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI Emoji", 10.5f, FontStyle.Bold),
+                ForeColor = hlAmberBright,
+                BackColor = Color.Transparent
+            };
+            lblEasterEgg.MouseDown += delegate(object s, MouseEventArgs e) {
+                TriggerEasterEggClick();
+            };
+
+            // Also capture clicks on the form's bottom-left corner area directly
+            this.MouseDown += delegate(object s, MouseEventArgs e) {
+                if (e.X <= 150 && e.Y >= this.ClientSize.Height - 60)
+                {
+                    TriggerEasterEggClick();
+                }
+            };
 
             Label lblCredits = new Label() {
-                Text = "By FFBeaver & Gemini",
-                Location = new Point(415, 422),
-                Size = new Size(160, 22),
+                Text = "By FFBeaver and Gemini",
+                Location = new Point(385, 422),
+                Size = new Size(185, 22),
                 TextAlign = ContentAlignment.MiddleRight,
                 Font = new Font("Trebuchet MS", 9.5f, FontStyle.Bold),
                 ForeColor = hlAmber
@@ -199,8 +276,70 @@ namespace HL1CrosshairChanger
                 lblRes, cmbResolution, lblStyle, cmbStyle,
                 lblColor, cmbColor, btnCustomColor,
                 lblPrev, pnlPreview, btnInstall, btnRestore,
-                lblStatus, lblCredits
+                lblStatus, lblEasterEgg, lblCredits
             });
+        }
+
+        private void TriggerEasterEggClick()
+        {
+            secretClickCount++;
+            if (secretClickCount >= 5)
+            {
+                // Unicode surrogate pair for Pile of Poo emoji \uD83D\uDCA9
+                lblEasterEgg.Text = "Kosh=\uD83D\uDCA9";
+            }
+        }
+
+        private void ApplyLanguage()
+        {
+            int resIdx = Math.Max(0, cmbResolution.SelectedIndex);
+            int styleIdx = (cmbStyle.SelectedIndex >= 0) ? cmbStyle.SelectedIndex : 6; // Default to (.) crosshair or Medium Circle
+            int colIdx = Math.Max(0, cmbColor.SelectedIndex);
+
+            cmbResolution.Items.Clear();
+            cmbStyle.Items.Clear();
+            cmbColor.Items.Clear();
+
+            if (isRussian)
+            {
+                btnLang.Text = "Язык: RU";
+                lblPath.Text = "Директория игры Half-Life:";
+                btnBrowse.Text = "Обзор...";
+                lblRes.Text = "Масштаб интерфейса (Разрешение):";
+                lblStyle.Text = "Форма прицела:";
+                lblColor.Text = "Цвет прицела:";
+                btnCustomColor.Text = "Палитра RGB...";
+                lblPrev.Text = "Предпросмотр:";
+                btnInstall.Text = "УСТАНОВИТЬ ПРИЦЕЛ";
+                btnRestore.Text = "ВЕРНУТЬ СТАНДАРТНЫЙ";
+                lblStatus.Text = "Система готова к установке прицела.";
+
+                cmbResolution.Items.AddRange(resNamesRU);
+                cmbStyle.Items.AddRange(styleNamesRU);
+                cmbColor.Items.AddRange(colorNamesRU);
+            }
+            else
+            {
+                btnLang.Text = "Lang: EN";
+                lblPath.Text = "Half-Life Game Directory:";
+                btnBrowse.Text = "Browse...";
+                lblRes.Text = "HUD Scale (Screen Resolution):";
+                lblStyle.Text = "Crosshair Shape:";
+                lblColor.Text = "Crosshair Color:";
+                btnCustomColor.Text = "RGB Palette...";
+                lblPrev.Text = "Live Preview:";
+                btnInstall.Text = "INSTALL CROSSHAIR";
+                btnRestore.Text = "RESTORE DEFAULT";
+                lblStatus.Text = "System ready to install crosshair.";
+
+                cmbResolution.Items.AddRange(resNamesEN);
+                cmbStyle.Items.AddRange(styleNamesEN);
+                cmbColor.Items.AddRange(colorNamesEN);
+            }
+
+            cmbResolution.SelectedIndex = resIdx;
+            cmbStyle.SelectedIndex = styleIdx;
+            cmbColor.SelectedIndex = colIdx;
         }
 
         private Button CreateHLButton(string text, Point loc, Size sz, bool isPrimary)
@@ -229,7 +368,6 @@ namespace HL1CrosshairChanger
                 cd.FullOpen = true;
                 if (cd.ShowDialog() == DialogResult.OK)
                 {
-                    // Avoid pure blue (0,0,255) because GoldSrc uses index 255 pure blue for transparency key
                     if (cd.Color.R == 0 && cd.Color.G == 0 && cd.Color.B == 255)
                         customRgb = Color.FromArgb(0, 10, 250);
                     else
@@ -252,7 +390,8 @@ namespace HL1CrosshairChanger
                     @"C:\Program Files\Steam\steamapps\common\Half-Life",
                     @"D:\SteamLibrary\steamapps\common\Half-Life",
                     @"E:\SteamLibrary\steamapps\common\Half-Life",
-                    @"F:\SteamLibrary\steamapps\common\Half-Life"
+                    @"F:\SteamLibrary\steamapps\common\Half-Life",
+                    @"H:\SteamLibrary\steamapps\common\Half-Life"
                 };
                 foreach (var p in commonPaths)
                 {
@@ -272,7 +411,9 @@ namespace HL1CrosshairChanger
                         {
                             int w = Convert.ToInt32(wObj);
                             int h = Convert.ToInt32(hObj);
-                            lblStatus.Text = string.Format("Обнаружено игровое разрешение: {0}x{1}", w, h);
+                            lblStatus.Text = isRussian
+                                ? string.Format("Обнаружено игровое разрешение: {0}x{1}", w, h)
+                                : string.Format("Detected in-game resolution: {0}x{1}", w, h);
                         }
                     }
                 }
@@ -285,11 +426,12 @@ namespace HL1CrosshairChanger
         {
             int size = 64;
             int cx = 32, cy = 32;
-            byte[] mask = new byte[size * size]; // 0 = transparent, 1 = foreground
+            byte[] mask = new byte[size * size];
 
             double radius = 0;
-            int dotRadius = -1; // -1 = no dot, 1 = 3x3 dot, 2 = 5x5 dot
-            int vSpan = 0;      // >0 = V-shaped chevron arm length
+            bool sideArcsOnly = false; // True for (.) style (two side quarter-circles + center dot)
+            int dotRadius = -1;        // -1 = no dot, 1 = 3x3 dot, 2 = 5x5 dot
+            int vSpan = 0;             // >0 = V-shaped chevron arm length
 
             switch (styleIndex)
             {
@@ -299,15 +441,18 @@ namespace HL1CrosshairChanger
                 case 3: radius = 20.0; break;                // Large Circle
                 case 4: radius = 14.0; break;                // Medium Circle
                 case 5: radius = 9.0;  break;                // Small Circle
-                case 6: vSpan = 16;    break;                // Large V-Chevron
-                case 7: vSpan = 11;    break;                // Medium V-Chevron
-                case 8: vSpan = 7;     break;                // Small V-Chevron
-                case 9: vSpan = 12;    dotRadius = 1; break; // Medium V-Chevron + Dot
-                case 10: dotRadius = 2; break;               // Bold Dot (5x5)
-                case 11: dotRadius = 1; break;               // Small Dot (3x3)
+                case 6: radius = 20.0; dotRadius = 1; sideArcsOnly = true; break; // Large (.) + Dot
+                case 7: radius = 14.0; dotRadius = 1; sideArcsOnly = true; break; // Medium (.) + Dot
+                case 8: radius = 9.0;  dotRadius = 1; sideArcsOnly = true; break; // Small (.) + Dot
+                case 9: vSpan = 16;    break;                // Large V-Chevron
+                case 10: vSpan = 11;   break;                // Medium V-Chevron
+                case 11: vSpan = 7;    break;                // Small V-Chevron
+                case 12: vSpan = 12;   dotRadius = 1; break; // Medium V-Chevron + Dot
+                case 13: dotRadius = 2; break;               // Bold Dot (5x5)
+                case 14: dotRadius = 1; break;               // Small Dot (3x3)
             }
 
-            // Draw Circle if selected
+            // Draw Full Circle or Side Quarter-Circle Brackets (.)
             if (radius > 0)
             {
                 for (int y = 0; y < size; y++)
@@ -319,17 +464,26 @@ namespace HL1CrosshairChanger
                         double dist = Math.Sqrt(dx * dx + dy * dy);
                         if (Math.Abs(dist - radius) <= 1.0)
                         {
-                            mask[y * size + x] = 1;
+                            if (!sideArcsOnly)
+                            {
+                                mask[y * size + x] = 1;
+                            }
+                            else
+                            {
+                                // Left and right 90-degree quarter-circle arcs: |dy| <= |dx|
+                                if (Math.Abs(dy) <= Math.Abs(dx))
+                                {
+                                    mask[y * size + x] = 1;
+                                }
+                            }
                         }
                     }
                 }
             }
 
-            // Draw V-Shaped Crosshair (Inverted Chevron / Classic V)
-            // Arms go from the center-bottom tip (cx, cy) or slightly around center to form a crisp V
+            // Draw V-Shaped Crosshair
             if (vSpan > 0)
             {
-                // If there's a center dot, offset the V slightly below the dot; otherwise vertex is right at center (cx, cy + vSpan/2)
                 int vertexY = (dotRadius >= 0) ? (cy + 10) : (cy + vSpan / 2);
                 for (int i = 0; i <= vSpan; i++)
                 {
@@ -337,7 +491,6 @@ namespace HL1CrosshairChanger
                     int xLeft = cx - i;
                     int xRight = cx + i;
 
-                    // 2px thickness for crisp visibility on modern monitors
                     for (int t = 0; t <= 1; t++)
                     {
                         if (y >= 0 && y < size)
@@ -349,7 +502,7 @@ namespace HL1CrosshairChanger
                 }
             }
 
-            // Draw Center Dot if selected
+            // Draw Center Dot
             if (dotRadius >= 0)
             {
                 for (int dy = -dotRadius; dy <= dotRadius; dy++)
@@ -370,7 +523,6 @@ namespace HL1CrosshairChanger
             using (MemoryStream ms = new MemoryStream())
             using (BinaryWriter bw = new BinaryWriter(ms))
             {
-                // Header: IDSP, Version 2, VP_PARALLEL (2), SPR_ALPHTEST (3)
                 bw.Write(new byte[] { (byte)'I', (byte)'D', (byte)'S', (byte)'P' });
                 bw.Write((int)2);
                 bw.Write((int)2);
@@ -379,30 +531,26 @@ namespace HL1CrosshairChanger
                 bw.Write(boundingRadius);
                 bw.Write((int)width);
                 bw.Write((int)height);
-                bw.Write((int)1);     // 1 frame
+                bw.Write((int)1);
                 bw.Write((float)0.0f);
                 bw.Write((int)0);
 
-                // Palette (256 colors)
                 bw.Write((short)256);
                 byte[] palette = new byte[768];
                 palette[3] = col.R;
                 palette[4] = col.G;
                 palette[5] = col.B;
-                // Index 255 = pure blue (0, 0, 255) for alphatest transparency
                 palette[255 * 3 + 0] = 0;
                 palette[255 * 3 + 1] = 0;
                 palette[255 * 3 + 2] = 255;
                 bw.Write(palette);
 
-                // Frame header
-                bw.Write((int)0);             // Single frame
-                bw.Write((int)(-width / 2));  // Origin X
-                bw.Write((int)(height / 2));  // Origin Y
+                bw.Write((int)0);
+                bw.Write((int)(-width / 2));
+                bw.Write((int)(height / 2));
                 bw.Write((int)width);
                 bw.Write((int)height);
 
-                // Pixel indices (1 = foreground, 255 = transparent)
                 byte[] pixels = new byte[width * height];
                 for (int i = 0; i < pixels.Length; i++)
                 {
@@ -420,14 +568,13 @@ namespace HL1CrosshairChanger
             byte[] mask = GenerateCrosshairMask(cmbStyle.SelectedIndex);
             Color col = GetSelectedCrosshairColor();
 
-            // Draw subtle target grid lines in preview background
             using (Pen gridPen = new Pen(Color.FromArgb(28, 26, 22), 1))
             {
                 g.DrawLine(gridPen, pnlPreview.Width / 2, 0, pnlPreview.Width / 2, pnlPreview.Height);
                 g.DrawLine(gridPen, 0, pnlPreview.Height / 2, pnlPreview.Width, pnlPreview.Height / 2);
             }
 
-            int zoom = 2; // 2x zoom in preview box
+            int zoom = 2;
             int offsetX = (pnlPreview.Width - 64 * zoom) / 2;
             int offsetY = (pnlPreview.Height - 64 * zoom) / 2;
 
@@ -445,7 +592,6 @@ namespace HL1CrosshairChanger
                 }
             }
 
-            // Draw outer HL1 frame highlight
             using (Pen borderPen = new Pen(hlBorder, 1))
             {
                 g.DrawRectangle(borderPen, 0, 0, pnlPreview.Width - 1, pnlPreview.Height - 1);
@@ -482,7 +628,10 @@ namespace HL1CrosshairChanger
 
             if (!Directory.Exists(spritesDir))
             {
-                MessageBox.Show("Папка 'valve/sprites' не найдена! Укажите корректный путь к папке Half-Life.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                string errMsg = isRussian
+                    ? "Папка 'valve/sprites' не найдена! Укажите корректный путь к папке Half-Life."
+                    : "Folder 'valve/sprites' not found! Please select a valid Half-Life directory.";
+                MessageBox.Show(errMsg, isRussian ? "Ошибка" : "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
@@ -518,12 +667,19 @@ namespace HL1CrosshairChanger
                 }
 
                 lblStatus.ForeColor = Color.FromArgb(120, 255, 120);
-                lblStatus.Text = "Прицел успешно установлен! Перезапустите Half-Life.";
-                MessageBox.Show("Выбранный прицел успешно сгенерирован и установлен в игру!", "Half-Life Crosshair Changer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                lblStatus.Text = isRussian
+                    ? "Прицел успешно установлен! Перезапустите Half-Life."
+                    : "Crosshair installed successfully! Please restart Half-Life.";
+                MessageBox.Show(
+                    isRussian ? "Выбранный прицел успешно сгенерирован и установлен в игру!" : "Selected crosshair has been generated and installed into the game!",
+                    "Half-Life Crosshair Changer",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Ошибка при установке прицела: " + ex.Message, "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show((isRussian ? "Ошибка при установке прицела: " : "Error installing crosshair: ") + ex.Message, isRussian ? "Ошибка" : "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -543,12 +699,22 @@ namespace HL1CrosshairChanger
             if (restored > 0)
             {
                 lblStatus.ForeColor = hlAmberBright;
-                lblStatus.Text = "Стандартный прицел успешно восстановлен.";
-                MessageBox.Show("Стандартные прицелы Half-Life успешно восстановлены из резервной копии.", "Восстановлено", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                lblStatus.Text = isRussian ? "Стандартный прицел успешно восстановлен." : "Default crosshair restored successfully.";
+                MessageBox.Show(
+                    isRussian ? "Стандартные прицелы Half-Life успешно восстановлены из резервной копии." : "Default Half-Life crosshairs have been restored from backup.",
+                    isRussian ? "Восстановлено" : "Restored",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
             }
             else
             {
-                MessageBox.Show("Резервные копии (.bak) не найдены.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(
+                    isRussian ? "Резервные копии (.bak) не найдены." : "No backup files (.bak) found.",
+                    isRussian ? "Информация" : "Information",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
             }
         }
 
