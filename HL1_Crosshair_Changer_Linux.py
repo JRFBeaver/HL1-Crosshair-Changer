@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Half-Life 1 Crosshair Changer v5.0 (Linux Native Edition)
+Half-Life 1 Crosshair Changer v5.1 (Linux Native Edition)
 By FFBeaver and Gemini
 """
 
@@ -16,18 +16,22 @@ from tkinter import filedialog, messagebox, colorchooser
 class HL1CrosshairChangerLinux:
     def __init__(self, root):
         self.root = root
-        self.root.title("Half-Life Crosshair Changer v5.0")
-        self.root.geometry("600x485")
+        self.root.title("Half-Life Crosshair Changer v5.1")
+        self.root.geometry("610x545")
         self.root.resizable(False, False)
 
-        # HL1 Classic Color Scheme
+        # Base Colors & Game Mode Palettes
         self.bg_dark = "#181512"
         self.panel_bg = "#241F1A"
-        self.amber = "#FFA000"
-        self.amber_bright = "#FFC328"
-        self.border_col = "#785014"
         self.text_white = "#F0E6D7"
-        self.btn_primary = "#B95F00"
+
+        self.col_hl = "#FF9600"      # HL1 Orange
+        self.col_of = "#32CD32"      # Opposing Force Green
+        self.col_bs = "#1E90FF"      # Blue Shift Blue
+        self.col_custom = "#FFD700"  # Custom Mod Gold
+
+        self.active_accent = self.col_hl
+        self.game_mode = 0  # 0=HL (valve), 1=OF (gearbox), 2=BS (bshift), 3=Custom
 
         self.root.configure(bg=self.bg_dark)
 
@@ -107,145 +111,224 @@ class HL1CrosshairChangerLinux:
         ]
 
         self.res_idx = 0
-        self.style_idx = 6  # Default to Large Brackets (.) + Dot
+        self.style_idx = 6
         self.col_idx = 0
 
         self.build_ui()
         self.apply_language()
+        self.select_game_mode(0)
         self.auto_detect_path()
 
     def build_ui(self):
         # Header
-        header = tk.Frame(self.root, bg="#120F0C", height=48, width=600)
+        header = tk.Frame(self.root, bg="#120F0C", height=48, width=610)
         header.place(x=0, y=0)
-        tk.Frame(self.root, bg=self.amber, height=2, width=600).place(x=0, y=46)
+        self.header_line = tk.Frame(self.root, bg=self.active_accent, height=2, width=610)
+        self.header_line.place(x=0, y=46)
 
-        tk.Label(
+        self.lbl_title = tk.Label(
             header, text="HALF-LIFE  //  CROSSHAIR CHANGER",
-            bg="#120F0C", fg=self.amber, font=("DejaVu Sans", 13, "bold")
-        ).place(x=18, y=11)
+            bg="#120F0C", fg=self.active_accent, font=("DejaVu Sans", 13, "bold")
+        )
+        self.lbl_title.place(x=18, y=11)
 
         tk.Label(
-            header, text="v5.0",
-            bg="#120F0C", fg=self.border_col, font=("Monospace", 10, "bold")
-        ).place(x=435, y=15)
+            header, text="v5.1",
+            bg="#120F0C", fg="#8C6E3C", font=("Monospace", 10, "bold")
+        ).place(x=445, y=15)
 
         self.btn_lang = tk.Button(
-            header, text="Lang: EN", bg=self.panel_bg, fg=self.amber,
-            activebackground="#3C3020", activeforeground=self.amber_bright,
-            highlightbackground=self.amber, relief="solid", bd=1,
-            font=("DejaVu Sans", 8, "bold"), command=self.toggle_language
+            header, text="Lang: EN", bg=self.panel_bg, fg=self.active_accent,
+            activebackground="#3C3020", activeforeground="#FFFFFF",
+            relief="solid", bd=1, font=("DejaVu Sans", 8, "bold"), command=self.toggle_language
         )
-        self.btn_lang.place(x=485, y=10, width=90, height=26)
+        self.btn_lang.place(x=495, y=10, width=90, height=26)
+
+        # 4 Game / Mod Buttons
+        self.btn_hl = tk.Button(
+            self.root, text="Half-Life", relief="solid", bd=2,
+            font=("DejaVu Sans", 8, "bold"), command=lambda: self.select_game_mode(0)
+        )
+        self.btn_hl.place(x=20, y=60, width=130, height=32)
+
+        self.btn_of = tk.Button(
+            self.root, text="Opposing Force", relief="solid", bd=1,
+            font=("DejaVu Sans", 8, "bold"), command=lambda: self.select_game_mode(1)
+        )
+        self.btn_of.place(x=158, y=60, width=135, height=32)
+
+        self.btn_bs = tk.Button(
+            self.root, text="Blue Shift", relief="solid", bd=1,
+            font=("DejaVu Sans", 8, "bold"), command=lambda: self.select_game_mode(2)
+        )
+        self.btn_bs.place(x=301, y=60, width=125, height=32)
+
+        self.btn_custom = tk.Button(
+            self.root, text="Custom Mod", relief="solid", bd=1,
+            font=("DejaVu Sans", 8, "bold"), command=lambda: self.select_game_mode(3)
+        )
+        self.btn_custom.place(x=434, y=60, width=151, height=32)
+
+        # Custom Mod Folder Entry
+        self.lbl_custom_mod = tk.Label(self.root, bg=self.bg_dark, fg=self.col_custom, font=("DejaVu Sans", 9))
+        self.txt_custom_mod = tk.Entry(
+            self.root, bg=self.panel_bg, fg=self.col_custom,
+            insertbackground=self.col_custom, relief="solid", bd=1, font=("Monospace", 9, "bold")
+        )
+        self.txt_custom_mod.insert(0, "cstrike")
 
         # Path
-        self.lbl_path = tk.Label(self.root, bg=self.bg_dark, fg=self.amber, font=("DejaVu Sans", 9))
-        self.lbl_path.place(x=20, y=60)
+        self.lbl_path = tk.Label(self.root, bg=self.bg_dark, fg=self.active_accent, font=("DejaVu Sans", 9))
+        self.lbl_path.place(x=20, y=130)
 
         self.txt_path = tk.Entry(
             self.root, bg=self.panel_bg, fg=self.text_white,
-            insertbackground=self.amber, relief="solid", bd=1, font=("DejaVu Sans", 9)
+            insertbackground=self.active_accent, relief="solid", bd=1, font=("DejaVu Sans", 9)
         )
-        self.txt_path.place(x=20, y=83, width=445, height=25)
+        self.txt_path.place(x=20, y=152, width=455, height=25)
 
         self.btn_browse = tk.Button(
-            self.root, bg=self.panel_bg, fg=self.amber,
-            activebackground="#3C3020", activeforeground=self.amber_bright,
+            self.root, bg=self.panel_bg, fg=self.active_accent,
             relief="solid", bd=1, font=("DejaVu Sans", 8, "bold"), command=self.browse_dir
         )
-        self.btn_browse.place(x=475, y=82, width=100, height=26)
+        self.btn_browse.place(x=485, y=151, width=100, height=26)
 
         # Resolution
-        self.lbl_res = tk.Label(self.root, bg=self.bg_dark, fg=self.amber, font=("DejaVu Sans", 9))
-        self.lbl_res.place(x=20, y=122)
+        self.lbl_res = tk.Label(self.root, bg=self.bg_dark, fg=self.active_accent, font=("DejaVu Sans", 9))
+        self.lbl_res.place(x=20, y=190)
 
         self.var_res = tk.StringVar()
         self.opt_res = tk.OptionMenu(self.root, self.var_res, "")
         self.style_option_menu(self.opt_res)
-        self.opt_res.place(x=20, y=145, width=355, height=28)
+        self.opt_res.place(x=20, y=212, width=360, height=28)
 
         # Style
-        self.lbl_style = tk.Label(self.root, bg=self.bg_dark, fg=self.amber, font=("DejaVu Sans", 9))
-        self.lbl_style.place(x=20, y=184)
+        self.lbl_style = tk.Label(self.root, bg=self.bg_dark, fg=self.active_accent, font=("DejaVu Sans", 9))
+        self.lbl_style.place(x=20, y=250)
 
         self.var_style = tk.StringVar()
         self.opt_style = tk.OptionMenu(self.root, self.var_style, "")
         self.style_option_menu(self.opt_style)
-        self.opt_style.place(x=20, y=207, width=355, height=28)
+        self.opt_style.place(x=20, y=272, width=360, height=28)
 
         # Color
-        self.lbl_color = tk.Label(self.root, bg=self.bg_dark, fg=self.amber, font=("DejaVu Sans", 9))
-        self.lbl_color.place(x=20, y=246)
+        self.lbl_color = tk.Label(self.root, bg=self.bg_dark, fg=self.active_accent, font=("DejaVu Sans", 9))
+        self.lbl_color.place(x=20, y=310)
 
         self.var_color = tk.StringVar()
         self.opt_color = tk.OptionMenu(self.root, self.var_color, "")
         self.style_option_menu(self.opt_color)
-        self.opt_color.place(x=20, y=269, width=235, height=28)
+        self.opt_color.place(x=20, y=332, width=240, height=28)
 
         self.btn_rgb = tk.Button(
-            self.root, bg=self.panel_bg, fg=self.amber,
-            activebackground="#3C3020", activeforeground=self.amber_bright,
+            self.root, bg=self.panel_bg, fg=self.active_accent,
             relief="solid", bd=1, font=("DejaVu Sans", 8, "bold"), command=self.pick_custom_color
         )
-        self.btn_rgb.place(x=265, y=269, width=110, height=28)
+        self.btn_rgb.place(x=270, y=332, width=110, height=28)
 
         # Preview
-        self.lbl_prev = tk.Label(self.root, bg=self.bg_dark, fg=self.amber, font=("DejaVu Sans", 9))
-        self.lbl_prev.place(x=400, y=122)
+        self.lbl_prev = tk.Label(self.root, bg=self.bg_dark, fg=self.active_accent, font=("DejaVu Sans", 9))
+        self.lbl_prev.place(x=405, y=190)
 
         self.canvas = tk.Canvas(
-            self.root, width=170, height=150, bg="#0E0D0B",
-            highlightbackground=self.border_col, highlightthickness=1
+            self.root, width=175, height=150, bg="#0E0D0B",
+            highlightbackground=self.active_accent, highlightthickness=1
         )
-        self.canvas.place(x=400, y=145)
+        self.canvas.place(x=405, y=212)
 
         # Action Buttons
         self.btn_install = tk.Button(
-            self.root, bg=self.btn_primary, fg="#FFFFFF",
-            activebackground="#E17D0A", activeforeground="#FFFFFF",
+            self.root, bg="#8B4700", fg="#FFFFFF",
             relief="solid", bd=1, font=("DejaVu Sans", 10, "bold"), command=self.install_crosshair
         )
-        self.btn_install.place(x=20, y=322, width=275, height=44)
+        self.btn_install.place(x=20, y=385, width=280, height=44)
 
         self.btn_restore = tk.Button(
-            self.root, bg=self.panel_bg, fg=self.amber,
-            activebackground="#3C3020", activeforeground=self.amber_bright,
+            self.root, bg=self.panel_bg, fg=self.active_accent,
             relief="solid", bd=1, font=("DejaVu Sans", 9, "bold"), command=self.restore_backup
         )
-        self.btn_restore.place(x=310, y=322, width=265, height=44)
+        self.btn_restore.place(x=315, y=385, width=265, height=44)
 
         # Status
-        self.lbl_status = tk.Label(self.root, bg=self.bg_dark, fg=self.amber_bright, font=("DejaVu Sans", 9))
-        self.lbl_status.place(x=20, y=382)
+        self.lbl_status = tk.Label(self.root, bg=self.bg_dark, fg=self.active_accent, font=("DejaVu Sans", 9))
+        self.lbl_status.place(x=20, y=442)
 
         # Secret Bottom-Left Easter Egg Zone (5 clicks -> "Kosh=💩")
         self.lbl_easter = tk.Label(
-            self.root, text="", bg=self.bg_dark, fg=self.amber_bright,
+            self.root, text="", bg=self.bg_dark, fg=self.active_accent,
             font=("DejaVu Sans", 11, "bold"), anchor="w"
         )
-        self.lbl_easter.place(x=18, y=425, width=160, height=32)
+        self.lbl_easter.place(x=18, y=480, width=160, height=32)
         self.lbl_easter.bind("<Button-1>", self.trigger_easter_egg)
         self.root.bind("<Button-1>", self.check_corner_click)
 
         # Credits
-        tk.Label(
-            self.root, text="By FFBeaver and Gemini", bg=self.bg_dark, fg=self.amber,
+        self.lbl_credits = tk.Label(
+            self.root, text="By FFBeaver and Gemini", bg=self.bg_dark, fg=self.active_accent,
             font=("DejaVu Sans", 9, "bold"), anchor="e"
-        ).place(x=380, y=430, width=195, height=24)
+        )
+        self.lbl_credits.place(x=390, y=485, width=195, height=24)
+
+    def select_game_mode(self, mode):
+        self.game_mode = mode
+        if mode == 0: self.active_accent = self.col_hl
+        elif mode == 1: self.active_accent = self.col_of
+        elif mode == 2: self.active_accent = self.col_bs
+        else: self.active_accent = self.col_custom
+
+        self.btn_hl.config(bg="#4A2C00" if mode == 0 else "#1C1916", fg="#FFFFFF" if mode == 0 else self.col_hl)
+        self.btn_of.config(bg="#104010" if mode == 1 else "#1C1916", fg="#FFFFFF" if mode == 1 else self.col_of)
+        self.btn_bs.config(bg="#0C3058" if mode == 2 else "#1C1916", fg="#FFFFFF" if mode == 2 else self.col_bs)
+        self.btn_custom.config(bg="#4A3E00" if mode == 3 else "#1C1916", fg="#FFFFFF" if mode == 3 else self.col_custom)
+
+        if mode == 3:
+            self.lbl_custom_mod.place(x=20, y=100)
+            self.txt_custom_mod.place(x=270, y=99, width=155, height=23)
+        else:
+            self.lbl_custom_mod.place_forget()
+            self.txt_custom_mod.place_forget()
+
+        for lbl in (self.lbl_title, self.lbl_path, self.lbl_res, self.lbl_style, self.lbl_color, self.lbl_prev, self.lbl_credits, self.lbl_status):
+            lbl.config(fg=self.active_accent)
+
+        self.header_line.config(bg=self.active_accent)
+        self.canvas.config(highlightbackground=self.active_accent)
+        self.btn_lang.config(fg=self.active_accent)
+        self.btn_browse.config(fg=self.active_accent)
+        self.btn_rgb.config(fg=self.active_accent)
+        self.btn_restore.config(fg=self.active_accent)
+
+        install_bg = {"#FF9600": "#9A5000", "#32CD32": "#1E781E", "#1E90FF": "#125496", "#FFD700": "#8A7000"}[self.active_accent]
+        self.btn_install.config(bg=install_bg)
+        self.update_status_target()
+
+    def get_target_mod_folder(self):
+        if self.game_mode == 0: return "valve"
+        if self.game_mode == 1: return "gearbox"
+        if self.game_mode == 2: return "bshift"
+        c = self.txt_custom_mod.get().strip()
+        return c if c else "cstrike"
+
+    def update_status_target(self):
+        mod = self.get_target_mod_folder()
+        if self.is_russian:
+            self.lbl_status.config(text=f"Целевая папка мода: {mod}/sprites")
+        else:
+            self.lbl_status.config(text=f"Target mod folder: {mod}/sprites")
 
     def style_option_menu(self, opt):
         opt.config(
             bg=self.panel_bg, fg=self.text_white, activebackground="#3C3020",
-            activeforeground=self.amber_bright, highlightthickness=1,
-            highlightbackground=self.border_col, relief="flat", font=("DejaVu Sans", 9), anchor="w"
+            activeforeground="#FFFFFF", highlightthickness=1,
+            highlightbackground="#785014", relief="flat", font=("DejaVu Sans", 9), anchor="w"
         )
         opt["menu"].config(
-            bg=self.panel_bg, fg=self.text_white, activebackground=self.btn_primary,
+            bg=self.panel_bg, fg=self.text_white, activebackground="#9A5000",
             activeforeground="#FFFFFF", font=("DejaVu Sans", 9)
         )
 
     def check_corner_click(self, event):
-        if event.widget == self.root and event.x <= 150 and event.y >= 415:
+        if event.widget == self.root and event.x <= 150 and event.y >= 470:
             self.trigger_easter_egg(event)
 
     def trigger_easter_egg(self, event=None):
@@ -282,7 +365,9 @@ class HL1CrosshairChangerLinux:
     def apply_language(self):
         if self.is_russian:
             self.btn_lang.config(text="Язык: RU")
-            self.lbl_path.config(text="Директория игры Half-Life:")
+            self.btn_custom.config(text="Свой Вариант")
+            self.lbl_custom_mod.config(text="Папка мода (например cstrike, tfc):")
+            self.lbl_path.config(text="Корневая папка Half-Life:")
             self.btn_browse.config(text="Обзор...")
             self.lbl_res.config(text="Масштаб интерфейса (Разрешение):")
             self.lbl_style.config(text="Форма прицела:")
@@ -291,12 +376,13 @@ class HL1CrosshairChangerLinux:
             self.lbl_prev.config(text="Предпросмотр:")
             self.btn_install.config(text="УСТАНОВИТЬ ПРИЦЕЛ")
             self.btn_restore.config(text="ВЕРНУТЬ СТАНДАРТНЫЙ")
-            self.lbl_status.config(text="Система готова к установке прицела.")
 
             res_list, style_list, col_list = self.res_ru, self.styles_ru, self.colors_ru
         else:
             self.btn_lang.config(text="Lang: EN")
-            self.lbl_path.config(text="Half-Life Game Directory:")
+            self.btn_custom.config(text="Custom Mod")
+            self.lbl_custom_mod.config(text="Mod folder name (e.g. cstrike, tfc):")
+            self.lbl_path.config(text="Half-Life Root Directory:")
             self.btn_browse.config(text="Browse...")
             self.lbl_res.config(text="HUD Scale (Screen Resolution):")
             self.lbl_style.config(text="Crosshair Shape:")
@@ -305,7 +391,6 @@ class HL1CrosshairChangerLinux:
             self.lbl_prev.config(text="Live Preview:")
             self.btn_install.config(text="INSTALL CROSSHAIR")
             self.btn_restore.config(text="RESTORE DEFAULT")
-            self.lbl_status.config(text="System ready to install crosshair.")
 
             res_list, style_list, col_list = self.res_en, self.styles_en, self.colors_en
 
@@ -316,6 +401,7 @@ class HL1CrosshairChangerLinux:
         self.var_res.set(res_list[self.res_idx])
         self.var_style.set(style_list[self.style_idx])
         self.var_color.set(col_list[self.col_idx])
+        self.update_status_target()
         self.draw_preview()
 
     def auto_detect_path(self):
@@ -415,15 +501,15 @@ class HL1CrosshairChangerLinux:
 
     def draw_preview(self):
         self.canvas.delete("all")
-        self.canvas.create_line(85, 0, 85, 150, fill="#1C1A16")
-        self.canvas.create_line(0, 75, 170, 75, fill="#1C1A16")
+        self.canvas.create_line(87, 0, 87, 150, fill="#1C1A16")
+        self.canvas.create_line(0, 75, 175, 75, fill="#1C1A16")
 
         mask = self.generate_mask()
         r, g, b = self.get_selected_rgb()
         hex_col = f"#{r:02x}{g:02x}{b:02x}"
 
         zoom = 2
-        ox = (170 - 64 * zoom) // 2
+        ox = (175 - 64 * zoom) // 2
         oy = (150 - 64 * zoom) // 2
 
         for y in range(64):
@@ -449,13 +535,28 @@ class HL1CrosshairChangerLinux:
         pixels = bytes([1 if b == 1 else 255 for b in mask])
         return header + pal_sec + frame_hdr + pixels
 
+    def resolve_sprites_dir(self, base_dir, mod_folder):
+        cand_mod = os.path.join(base_dir, mod_folder)
+        cand_sprites = os.path.join(cand_mod, "sprites")
+        if os.path.isdir(cand_sprites):
+            return cand_sprites, cand_mod
+        direct_sprites = os.path.join(base_dir, "sprites")
+        if os.path.isdir(direct_sprites):
+            return direct_sprites, base_dir
+        return cand_sprites, cand_mod
+
     def install_crosshair(self):
         game_dir = self.txt_path.get().strip()
-        sprites_dir = os.path.join(game_dir, "valve", "sprites")
+        mod_folder = self.get_target_mod_folder()
+        sprites_dir, resolved_mod = self.resolve_sprites_dir(game_dir, mod_folder)
+
         if not os.path.isdir(sprites_dir):
-            msg = "Папка 'valve/sprites' не найдена! Проверьте путь к Half-Life." if self.is_russian else "Folder 'valve/sprites' not found! Please check your Half-Life directory."
-            messagebox.showerror("Error", msg)
-            return
+            if os.path.isdir(resolved_mod):
+                os.makedirs(sprites_dir, exist_ok=True)
+            else:
+                msg = f"Папка '{mod_folder}/sprites' не найдена!" if self.is_russian else f"Folder '{mod_folder}/sprites' not found!"
+                messagebox.showerror("Error", msg)
+                return
 
         mask = self.generate_mask()
         spr_bytes = self.build_spr(mask, self.get_selected_rgb())
@@ -466,6 +567,15 @@ class HL1CrosshairChangerLinux:
         else: targets = ["crosshairs.spr", "640crosshairs.spr", "1280crosshairs.spr", "2560crosshairs.spr"]
 
         try:
+            valve_sprites = os.path.join(game_dir, "valve", "sprites")
+            if os.path.isdir(valve_sprites) and os.path.abspath(sprites_dir) != os.path.abspath(valve_sprites):
+                for fname in os.listdir(valve_sprites):
+                    if fname.endswith(".txt"):
+                        src_txt = os.path.join(valve_sprites, fname)
+                        dst_txt = os.path.join(sprites_dir, fname)
+                        if not os.path.isfile(dst_txt):
+                            shutil.copy2(src_txt, dst_txt)
+
             for t in targets:
                 dest = os.path.join(sprites_dir, t)
                 bak = dest + ".bak"
@@ -489,24 +599,26 @@ class HL1CrosshairChangerLinux:
                         with open(fpath, "w", encoding="utf-8") as f:
                             f.write(updated)
 
-            user_cfg = os.path.join(game_dir, "valve", "userconfig.cfg")
+            user_cfg = os.path.join(resolved_mod, "userconfig.cfg")
             if not os.path.isfile(user_cfg):
                 with open(user_cfg, "w", encoding="utf-8") as f:
                     f.write('crosshair "1"\n')
 
             self.lbl_status.config(
                 fg="#78FF78",
-                text="Прицел успешно установлен! Перезапустите Half-Life." if self.is_russian else "Crosshair installed successfully! Please restart Half-Life."
+                text=f"Прицел установлен в [{mod_folder}]! Перезапустите игру." if self.is_russian else f"Crosshair installed into [{mod_folder}]! Please restart the game."
             )
             messagebox.showinfo(
-                "Half-Life Crosshair Changer",
-                "Выбранный прицел успешно установлен!" if self.is_russian else "Selected crosshair has been installed!"
+                "Half-Life Crosshair Changer v5.1",
+                f"Выбранный прицел установлен для [{mod_folder}]!" if self.is_russian else f"Selected crosshair installed for [{mod_folder}]!"
             )
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
     def restore_backup(self):
-        sprites_dir = os.path.join(self.txt_path.get().strip(), "valve", "sprites")
+        game_dir = self.txt_path.get().strip()
+        mod_folder = self.get_target_mod_folder()
+        sprites_dir, _ = self.resolve_sprites_dir(game_dir, mod_folder)
         if not os.path.isdir(sprites_dir):
             return
         restored = 0
@@ -518,16 +630,16 @@ class HL1CrosshairChangerLinux:
                 restored += 1
         if restored > 0:
             self.lbl_status.config(
-                fg=self.amber_bright,
-                text="Стандартный прицел успешно восстановлен." if self.is_russian else "Default crosshair restored successfully."
+                fg=self.active_accent,
+                text=f"Стандартный прицел [{mod_folder}] восстановлен." if self.is_russian else f"Default crosshair [{mod_folder}] restored."
             )
             messagebox.showinfo(
-                "Half-Life Crosshair Changer",
-                "Стандартные прицелы восстановлены из резервной копии." if self.is_russian else "Default Half-Life crosshairs restored from backup."
+                "Half-Life Crosshair Changer v5.1",
+                f"Стандартные прицелы [{mod_folder}] восстановлены." if self.is_russian else f"Default crosshairs [{mod_folder}] restored."
             )
         else:
             messagebox.showwarning(
-                "Half-Life Crosshair Changer",
+                "Half-Life Crosshair Changer v5.1",
                 "Резервные копии (.bak) не найдены." if self.is_russian else "No backup files (.bak) found."
             )
 
